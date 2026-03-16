@@ -1,0 +1,474 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Pull to Refresh - Bell Loader</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      -webkit-user-select: none;
+      user-select: none;
+    }
+
+    html, body {
+      height: 100%;
+      overflow: hidden;
+      background: #ECECEC;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      touch-action: none;
+    }
+
+    .pull-area {
+      position: relative;
+      width: 100%;
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    .bell-container {
+      position: absolute;
+      top: 40px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      opacity: 0;
+      transform: translateY(-20px);
+      transition: opacity 0.25s ease, transform 0.25s ease;
+    }
+
+    .bell-container.visible {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    .bell-container.shaking {
+      animation: bellShake 0.5s ease-in-out;
+    }
+
+    @keyframes bellShake {
+      0% { transform: rotate(0deg); }
+      15% { transform: rotate(14deg); }
+      30% { transform: rotate(-12deg); }
+      45% { transform: rotate(8deg); }
+      60% { transform: rotate(-5deg); }
+      75% { transform: rotate(3deg); }
+      90% { transform: rotate(-1deg); }
+      100% { transform: rotate(0deg); }
+    }
+
+    .bell-svg {
+      width: 44px;
+      height: 52px;
+    }
+
+    .content-area {
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      height: calc(100% - 100px);
+      background: #fff;
+      border-radius: 20px 20px 0 0;
+      box-shadow: 0 -2px 20px rgba(0,0,0,0.06);
+      transition: transform 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+      will-change: transform;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 16px 20px;
+      overflow: hidden;
+    }
+
+    .content-area .handle {
+      width: 36px;
+      height: 4px;
+      background: #D4D4D4;
+      border-radius: 2px;
+      margin-bottom: 20px;
+      flex-shrink: 0;
+    }
+
+    /* Default content */
+    .default-content {
+      width: 100%;
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      transition: opacity 0.3s ease;
+    }
+
+    .default-content .line {
+      height: 13px;
+      background: #F0F0F0;
+      border-radius: 7px;
+    }
+
+    .default-content .line:nth-child(1) { width: 70%; }
+    .default-content .line:nth-child(2) { width: 100%; }
+    .default-content .line:nth-child(3) { width: 85%; }
+    .default-content .line:nth-child(5) { width: 90%; }
+    .default-content .line:nth-child(6) { width: 60%; }
+    .default-content .line:nth-child(7) { width: 75%; }
+
+    .default-content .block {
+      width: 100%;
+      height: 110px;
+      background: #F0F0F0;
+      border-radius: 12px;
+    }
+
+    /* Skeleton loading */
+    .skeleton-content {
+      width: 100%;
+      flex: 1;
+      display: none;
+      flex-direction: column;
+      gap: 14px;
+    }
+
+    .skeleton-content.active {
+      display: flex;
+    }
+
+    .skeleton-content .skel {
+      border-radius: 8px;
+      background: linear-gradient(90deg, #F0F0F0 25%, #E0E0E0 50%, #F0F0F0 75%);
+      background-size: 200% 100%;
+      animation: shimmer 1.4s ease-in-out infinite;
+    }
+
+    .skeleton-content .skel-circle {
+      width: 48px;
+      height: 48px;
+      border-radius: 50%;
+      background: linear-gradient(90deg, #F0F0F0 25%, #E0E0E0 50%, #F0F0F0 75%);
+      background-size: 200% 100%;
+      animation: shimmer 1.4s ease-in-out infinite;
+      flex-shrink: 0;
+    }
+
+    .skeleton-content .skel-row {
+      display: flex;
+      gap: 12px;
+      align-items: center;
+    }
+
+    .skeleton-content .skel-lines {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .skeleton-content .skel-line { height: 12px; }
+    .skeleton-content .skel-line.short { width: 60%; }
+    .skeleton-content .skel-line.medium { width: 80%; }
+    .skeleton-content .skel-line.long { width: 100%; }
+
+    .skeleton-content .skel-block {
+      width: 100%;
+      height: 140px;
+    }
+
+    .skeleton-content .skel-half {
+      display: flex;
+      gap: 12px;
+    }
+
+    .skeleton-content .skel-half .skel {
+      flex: 1;
+      height: 100px;
+    }
+
+    @keyframes shimmer {
+      0% { background-position: 200% 0; }
+      100% { background-position: -200% 0; }
+    }
+  </style>
+</head>
+<body>
+  <div class="pull-area" id="pullArea">
+    <div class="bell-container" id="bellContainer">
+      <svg class="bell-svg" viewBox="0 0 22 26" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <clipPath id="bellShape">
+            <path d="M15.1836 21.4385C15.0641 23.8386 13.1154 25.7371 10.7158 25.7373C8.23883 25.7373 6.24147 23.7144 6.24121 21.2051L15.1836 21.4385ZM10.7158 0C15.67 0.000172337 19.6641 4.06585 19.6641 9.06543V10.6406C19.6641 11.9245 20.3746 13.0334 21.4307 13.5781V18.3643H0V13.5781C1.05615 13.0334 1.7666 11.9051 1.7666 10.6406V9.06543C1.7666 4.06574 5.76152 0 10.7158 0Z"/>
+          </clipPath>
+        </defs>
+
+        <!-- Grey bell (unfilled) -->
+        <path d="M15.1836 21.4385C15.0641 23.8386 13.1154 25.7371 10.7158 25.7373C8.23883 25.7373 6.24147 23.7144 6.24121 21.2051L15.1836 21.4385ZM10.7158 0C15.67 0.000172337 19.6641 4.06585 19.6641 9.06543V10.6406C19.6641 11.9245 20.3746 13.0334 21.4307 13.5781V18.3643H0V13.5781C1.05615 13.0334 1.7666 11.9051 1.7666 10.6406V9.06543C1.7666 4.06574 5.76152 0 10.7158 0Z" fill="#D3D3CA"/>
+
+        <!-- Red liquid fill clipped to bell shape -->
+        <g clip-path="url(#bellShape)">
+          <path id="wavePath" d="" fill="#E81A41"/>
+        </g>
+      </svg>
+    </div>
+
+    <div class="content-area" id="contentArea">
+      <div class="handle"></div>
+
+      <div class="default-content" id="defaultContent">
+        <div class="line"></div>
+        <div class="line"></div>
+        <div class="line"></div>
+        <div class="block"></div>
+        <div class="line"></div>
+        <div class="line"></div>
+        <div class="line"></div>
+      </div>
+
+      <div class="skeleton-content" id="skeletonContent">
+        <div class="skel-row">
+          <div class="skel-circle skel"></div>
+          <div class="skel-lines">
+            <div class="skel skel-line medium"></div>
+            <div class="skel skel-line short"></div>
+          </div>
+        </div>
+        <div class="skel skel-block"></div>
+        <div class="skel-row">
+          <div class="skel-circle skel"></div>
+          <div class="skel-lines">
+            <div class="skel skel-line long"></div>
+            <div class="skel skel-line medium"></div>
+          </div>
+        </div>
+        <div class="skel-half">
+          <div class="skel"></div>
+          <div class="skel"></div>
+        </div>
+        <div class="skel skel-line long"></div>
+        <div class="skel skel-line short"></div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const pullArea = document.getElementById('pullArea');
+    const contentArea = document.getElementById('contentArea');
+    const bellContainer = document.getElementById('bellContainer');
+    const wavePath = document.getElementById('wavePath');
+    const defaultContent = document.getElementById('defaultContent');
+    const skeletonContent = document.getElementById('skeletonContent');
+
+    let startY = 0;
+    let isDragging = false;
+    let isRefreshing = false;
+    let pullAmount = 0;
+    const MAX_PULL = 200;
+    const TRIGGER_THRESHOLD = 80;
+
+    const BELL_HEIGHT = 26;
+    const BELL_WIDTH = 22;
+
+    let waveAnimFrame = null;
+    let waveTime = 0;
+    let currentFill = 0;
+
+    function updateWave(fillLevel, amplitude) {
+      const baseY = BELL_HEIGHT - fillLevel;
+      const amp = amplitude;
+
+      let d = `M -2 ${baseY}`;
+      for (let x = -2; x <= BELL_WIDTH + 2; x += 0.5) {
+        const y = baseY
+          - Math.sin((x / BELL_WIDTH) * Math.PI * 2 + waveTime) * amp
+          - Math.sin((x / BELL_WIDTH) * Math.PI * 3 + waveTime * 1.4) * (amp * 0.35);
+        d += ` L ${x} ${y}`;
+      }
+      d += ` L ${BELL_WIDTH + 2} ${BELL_HEIGHT + 4} L -2 ${BELL_HEIGHT + 4} Z`;
+      wavePath.setAttribute('d', d);
+    }
+
+    function stopWaveAnimation() {
+      if (waveAnimFrame) {
+        cancelAnimationFrame(waveAnimFrame);
+        waveAnimFrame = null;
+      }
+    }
+
+    // Pull handlers - only move content and show grey bell, NO fill during pull
+    function handleTouchStart(e) {
+      if (isRefreshing) return;
+      startY = e.touches[0].clientY;
+      isDragging = true;
+      pullAmount = 0;
+    }
+
+    function handleTouchMove(e) {
+      if (!isDragging || isRefreshing) return;
+      e.preventDefault();
+
+      const deltaY = Math.max(0, e.touches[0].clientY - startY);
+      pullAmount = Math.min(deltaY, MAX_PULL);
+
+      contentArea.style.transition = 'none';
+      contentArea.style.transform = `translateY(${pullAmount * 0.4}px)`;
+
+      if (pullAmount > 10) {
+        bellContainer.classList.add('visible');
+      } else {
+        bellContainer.classList.remove('visible');
+      }
+    }
+
+    function handleTouchEnd() {
+      if (!isDragging || isRefreshing) return;
+      isDragging = false;
+
+      if (pullAmount >= TRIGGER_THRESHOLD) {
+        triggerRefresh();
+      } else {
+        resetPull();
+      }
+    }
+
+    function triggerRefresh() {
+      isRefreshing = true;
+
+      // Hold content slightly down while animating
+      contentArea.style.transition = 'transform 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94)';
+      contentArea.style.transform = 'translateY(40px)';
+
+      // Now animate the liquid fill from 0 to full
+      currentFill = 0;
+      waveTime = 0;
+      animateFillTo(BELL_HEIGHT, () => {
+        stopWaveAnimation();
+        updateWave(BELL_HEIGHT, 0.3);
+
+        // Shake
+        bellContainer.classList.add('shaking');
+
+        setTimeout(() => {
+          bellContainer.classList.remove('shaking');
+
+          setTimeout(() => {
+            // Hide bell, snap content back
+            bellContainer.classList.remove('visible');
+            contentArea.style.transition = 'transform 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94)';
+            contentArea.style.transform = 'translateY(0)';
+
+            // Show skeleton
+            defaultContent.style.display = 'none';
+            skeletonContent.classList.add('active');
+
+            // After skeleton, restore default content
+            setTimeout(() => {
+              skeletonContent.classList.remove('active');
+              defaultContent.style.display = 'flex';
+              defaultContent.style.opacity = '0';
+              requestAnimationFrame(() => {
+                defaultContent.style.opacity = '1';
+              });
+
+              currentFill = 0;
+              isRefreshing = false;
+              wavePath.setAttribute('d', '');
+            }, 2000);
+          }, 400);
+        }, 500);
+      });
+    }
+
+    function animateFillTo(target, callback) {
+      stopWaveAnimation();
+      const start = currentFill;
+      const startTime = performance.now();
+      const duration = 1200;
+
+      function step(now) {
+        const elapsed = now - startTime;
+        const t = Math.min(elapsed / duration, 1);
+        // Ease in-out for smooth liquid rise
+        const eased = t < 0.5
+          ? 2 * t * t
+          : 1 - Math.pow(-2 * t + 2, 2) / 2;
+        const fill = start + (target - start) * eased;
+        currentFill = fill;
+
+        // Wave amplitude: bigger in the middle, settles at the end
+        const amp = Math.sin(t * Math.PI) * 1.8 + 0.3;
+        waveTime += 0.065;
+        updateWave(fill, amp);
+
+        if (t < 1) {
+          waveAnimFrame = requestAnimationFrame(step);
+        } else {
+          if (callback) callback();
+        }
+      }
+      waveAnimFrame = requestAnimationFrame(step);
+    }
+
+    function resetPull() {
+      stopWaveAnimation();
+      currentFill = 0;
+      pullAmount = 0;
+      isRefreshing = false;
+
+      contentArea.style.transition = 'transform 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94)';
+      contentArea.style.transform = 'translateY(0)';
+
+      bellContainer.classList.remove('visible');
+      wavePath.setAttribute('d', '');
+    }
+
+    // Touch events
+    contentArea.addEventListener('touchstart', handleTouchStart, { passive: true });
+    contentArea.addEventListener('touchmove', handleTouchMove, { passive: false });
+    contentArea.addEventListener('touchend', handleTouchEnd);
+    pullArea.addEventListener('touchstart', handleTouchStart, { passive: true });
+    pullArea.addEventListener('touchmove', handleTouchMove, { passive: false });
+    pullArea.addEventListener('touchend', handleTouchEnd);
+
+    // Mouse fallback for desktop testing
+    let mouseDown = false;
+
+    pullArea.addEventListener('mousedown', (e) => {
+      if (isRefreshing) return;
+      startY = e.clientY;
+      isDragging = true;
+      mouseDown = true;
+      pullAmount = 0;
+    });
+
+    pullArea.addEventListener('mousemove', (e) => {
+      if (!mouseDown || !isDragging || isRefreshing) return;
+      e.preventDefault();
+
+      const deltaY = Math.max(0, e.clientY - startY);
+      pullAmount = Math.min(deltaY, MAX_PULL);
+
+      contentArea.style.transition = 'none';
+      contentArea.style.transform = `translateY(${pullAmount * 0.4}px)`;
+
+      if (pullAmount > 10) {
+        bellContainer.classList.add('visible');
+      } else {
+        bellContainer.classList.remove('visible');
+      }
+    });
+
+    pullArea.addEventListener('mouseup', () => {
+      mouseDown = false;
+      handleTouchEnd();
+    });
+
+    pullArea.addEventListener('mouseleave', () => {
+      if (mouseDown) {
+        mouseDown = false;
+        handleTouchEnd();
+      }
+    });
+  </script>
+</body>
+</html>
