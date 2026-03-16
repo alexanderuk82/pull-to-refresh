@@ -16,33 +16,37 @@
     html, body {
       height: 100%;
       overflow: hidden;
-      background: #FFFFFF;
+      background: #1A1A1A;
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
       touch-action: none;
     }
 
-    .pull-area {
-      position: relative;
-      width: 100%;
-      height: 100%;
+    /* Dark backdrop with bell always behind */
+    .backdrop {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: #1A1A1A;
       display: flex;
-      flex-direction: column;
-      align-items: center;
+      align-items: flex-start;
+      justify-content: center;
+      padding-top: 50px;
     }
 
     .bell-container {
-      position: absolute;
-      top: 20px;
-      z-index: 10;
       display: flex;
       flex-direction: column;
       align-items: center;
-      transform: translateY(-70px);
-      transition: transform 0.15s ease-out;
+      opacity: 0;
+      transform: scale(0.8);
+      transition: opacity 0.2s ease, transform 0.2s ease;
     }
 
     .bell-container.visible {
-      transform: translateY(0);
+      opacity: 1;
+      transform: scale(1);
     }
 
     .bell-container.shaking {
@@ -50,14 +54,14 @@
     }
 
     @keyframes bellShake {
-      0% { transform: rotate(0deg); }
-      15% { transform: rotate(14deg); }
-      30% { transform: rotate(-12deg); }
-      45% { transform: rotate(8deg); }
-      60% { transform: rotate(-5deg); }
-      75% { transform: rotate(3deg); }
-      90% { transform: rotate(-1deg); }
-      100% { transform: rotate(0deg); }
+      0% { transform: rotate(0deg) scale(1); }
+      15% { transform: rotate(14deg) scale(1); }
+      30% { transform: rotate(-12deg) scale(1); }
+      45% { transform: rotate(8deg) scale(1); }
+      60% { transform: rotate(-5deg) scale(1); }
+      75% { transform: rotate(3deg) scale(1); }
+      90% { transform: rotate(-1deg) scale(1); }
+      100% { transform: rotate(0deg) scale(1); }
     }
 
     .bell-svg {
@@ -65,19 +69,27 @@
       height: 52px;
     }
 
-    .content-area {
-      position: absolute;
+    /* Page content sits on top like a card */
+    .page {
+      position: fixed;
       top: 0;
       left: 0;
       right: 0;
       bottom: 0;
       background: #FFFFFF;
-      transition: transform 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
-      will-change: transform;
+      transition: transform 0.35s cubic-bezier(0.25, 0.46, 0.45, 0.94),
+                  border-radius 0.35s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+      will-change: transform, border-radius;
       display: flex;
       flex-direction: column;
       padding: 60px 20px 20px;
       overflow: hidden;
+      border-radius: 0;
+      z-index: 2;
+    }
+
+    .page.pulling {
+      box-shadow: 0 -10px 40px rgba(0,0,0,0.3);
     }
 
     /* Default content */
@@ -206,7 +218,8 @@
   </style>
 </head>
 <body>
-  <div class="pull-area" id="pullArea">
+  <!-- Dark backdrop with bell behind the page -->
+  <div class="backdrop">
     <div class="bell-container" id="bellContainer">
       <svg class="bell-svg" viewBox="0 0 22 26" fill="none" xmlns="http://www.w3.org/2000/svg">
         <defs>
@@ -224,54 +237,54 @@
         </g>
       </svg>
     </div>
+  </div>
 
-    <div class="content-area" id="contentArea">
-      <div class="default-content" id="defaultContent">
-        <div class="header-block"></div>
-        <div class="line"></div>
-        <div class="line"></div>
-        <div class="line"></div>
-        <div class="block"></div>
-        <div class="row">
-          <div class="card"></div>
-          <div class="card"></div>
-        </div>
-        <div class="line"></div>
-        <div class="line"></div>
-        <div class="line"></div>
-        <div class="line"></div>
+  <!-- Page content on top -->
+  <div class="page" id="page">
+    <div class="default-content" id="defaultContent">
+      <div class="header-block"></div>
+      <div class="line"></div>
+      <div class="line"></div>
+      <div class="line"></div>
+      <div class="block"></div>
+      <div class="row">
+        <div class="card"></div>
+        <div class="card"></div>
       </div>
+      <div class="line"></div>
+      <div class="line"></div>
+      <div class="line"></div>
+      <div class="line"></div>
+    </div>
 
-      <div class="skeleton-content" id="skeletonContent">
-        <div class="skel skel-header"></div>
-        <div class="skel-row">
-          <div class="skel-circle skel"></div>
-          <div class="skel-lines">
-            <div class="skel skel-line medium"></div>
-            <div class="skel skel-line short"></div>
-          </div>
+    <div class="skeleton-content" id="skeletonContent">
+      <div class="skel skel-header"></div>
+      <div class="skel-row">
+        <div class="skel-circle skel"></div>
+        <div class="skel-lines">
+          <div class="skel skel-line medium"></div>
+          <div class="skel skel-line short"></div>
         </div>
-        <div class="skel skel-block"></div>
-        <div class="skel-half">
-          <div class="skel"></div>
-          <div class="skel"></div>
-        </div>
-        <div class="skel-row">
-          <div class="skel-circle skel"></div>
-          <div class="skel-lines">
-            <div class="skel skel-line long"></div>
-            <div class="skel skel-line medium"></div>
-          </div>
-        </div>
-        <div class="skel skel-line long"></div>
-        <div class="skel skel-line short"></div>
       </div>
+      <div class="skel skel-block"></div>
+      <div class="skel-half">
+        <div class="skel"></div>
+        <div class="skel"></div>
+      </div>
+      <div class="skel-row">
+        <div class="skel-circle skel"></div>
+        <div class="skel-lines">
+          <div class="skel skel-line long"></div>
+          <div class="skel skel-line medium"></div>
+        </div>
+      </div>
+      <div class="skel skel-line long"></div>
+      <div class="skel skel-line short"></div>
     </div>
   </div>
 
   <script>
-    const pullArea = document.getElementById('pullArea');
-    const contentArea = document.getElementById('contentArea');
+    const page = document.getElementById('page');
     const bellContainer = document.getElementById('bellContainer');
     const wavePath = document.getElementById('wavePath');
     const defaultContent = document.getElementById('defaultContent');
@@ -283,6 +296,7 @@
     let pullAmount = 0;
     const MAX_PULL = 200;
     const TRIGGER_THRESHOLD = 80;
+    const MAX_RADIUS = 24;
 
     const BELL_HEIGHT = 26;
     const BELL_WIDTH = 22;
@@ -313,6 +327,23 @@
       }
     }
 
+    function updatePagePosition(pull) {
+      const progress = pull / MAX_PULL;
+      const radius = progress * MAX_RADIUS;
+
+      page.style.transition = 'none';
+      page.style.transform = `translateY(${pull * 0.5}px)`;
+      page.style.borderRadius = `${radius}px`;
+
+      if (pull > 10) {
+        page.classList.add('pulling');
+        bellContainer.classList.add('visible');
+      } else {
+        page.classList.remove('pulling');
+        bellContainer.classList.remove('visible');
+      }
+    }
+
     function handleTouchStart(e) {
       if (isRefreshing) return;
       startY = e.touches[0].clientY;
@@ -326,15 +357,7 @@
 
       const deltaY = Math.max(0, e.touches[0].clientY - startY);
       pullAmount = Math.min(deltaY, MAX_PULL);
-
-      contentArea.style.transition = 'none';
-      contentArea.style.transform = `translateY(${pullAmount * 0.4}px)`;
-
-      if (pullAmount > 10) {
-        bellContainer.classList.add('visible');
-      } else {
-        bellContainer.classList.remove('visible');
-      }
+      updatePagePosition(pullAmount);
     }
 
     function handleTouchEnd() {
@@ -351,13 +374,16 @@
     function triggerRefresh() {
       isRefreshing = true;
 
-      contentArea.style.transition = 'transform 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94)';
-      contentArea.style.transform = 'translateY(40px)';
+      // Hold page down with radius
+      page.style.transition = 'transform 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94), border-radius 0.3s ease';
+      page.style.transform = 'translateY(100px)';
+      page.style.borderRadius = `${MAX_RADIUS}px`;
 
       // Show skeleton immediately
       defaultContent.style.display = 'none';
       skeletonContent.classList.add('active');
 
+      // Animate bell fill
       currentFill = 0;
       waveTime = 0;
       animateFillTo(BELL_HEIGHT, () => {
@@ -370,10 +396,14 @@
           bellContainer.classList.remove('shaking');
 
           setTimeout(() => {
+            // Slide page back up, remove radius
             bellContainer.classList.remove('visible');
-            contentArea.style.transition = 'transform 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94)';
-            contentArea.style.transform = 'translateY(0)';
+            page.style.transition = 'transform 0.45s cubic-bezier(0.25, 0.46, 0.45, 0.94), border-radius 0.45s cubic-bezier(0.25, 0.46, 0.45, 0.94)';
+            page.style.transform = 'translateY(0)';
+            page.style.borderRadius = '0px';
+            page.classList.remove('pulling');
 
+            // Restore content
             skeletonContent.classList.remove('active');
             defaultContent.style.display = 'flex';
             defaultContent.style.opacity = '0';
@@ -423,25 +453,24 @@
       pullAmount = 0;
       isRefreshing = false;
 
-      contentArea.style.transition = 'transform 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94)';
-      contentArea.style.transform = 'translateY(0)';
+      page.style.transition = 'transform 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94), border-radius 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94)';
+      page.style.transform = 'translateY(0)';
+      page.style.borderRadius = '0px';
+      page.classList.remove('pulling');
 
       bellContainer.classList.remove('visible');
       wavePath.setAttribute('d', '');
     }
 
     // Touch events
-    contentArea.addEventListener('touchstart', handleTouchStart, { passive: true });
-    contentArea.addEventListener('touchmove', handleTouchMove, { passive: false });
-    contentArea.addEventListener('touchend', handleTouchEnd);
-    pullArea.addEventListener('touchstart', handleTouchStart, { passive: true });
-    pullArea.addEventListener('touchmove', handleTouchMove, { passive: false });
-    pullArea.addEventListener('touchend', handleTouchEnd);
+    page.addEventListener('touchstart', handleTouchStart, { passive: true });
+    page.addEventListener('touchmove', handleTouchMove, { passive: false });
+    page.addEventListener('touchend', handleTouchEnd);
 
     // Mouse fallback
     let mouseDown = false;
 
-    pullArea.addEventListener('mousedown', (e) => {
+    page.addEventListener('mousedown', (e) => {
       if (isRefreshing) return;
       startY = e.clientY;
       isDragging = true;
@@ -449,29 +478,21 @@
       pullAmount = 0;
     });
 
-    pullArea.addEventListener('mousemove', (e) => {
+    page.addEventListener('mousemove', (e) => {
       if (!mouseDown || !isDragging || isRefreshing) return;
       e.preventDefault();
 
       const deltaY = Math.max(0, e.clientY - startY);
       pullAmount = Math.min(deltaY, MAX_PULL);
-
-      contentArea.style.transition = 'none';
-      contentArea.style.transform = `translateY(${pullAmount * 0.4}px)`;
-
-      if (pullAmount > 10) {
-        bellContainer.classList.add('visible');
-      } else {
-        bellContainer.classList.remove('visible');
-      }
+      updatePagePosition(pullAmount);
     });
 
-    pullArea.addEventListener('mouseup', () => {
+    page.addEventListener('mouseup', () => {
       mouseDown = false;
       handleTouchEnd();
     });
 
-    pullArea.addEventListener('mouseleave', () => {
+    page.addEventListener('mouseleave', () => {
       if (mouseDown) {
         mouseDown = false;
         handleTouchEnd();
