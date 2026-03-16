@@ -336,6 +336,10 @@
       contentArea.style.transition = 'transform 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94)';
       contentArea.style.transform = 'translateY(40px)';
 
+      // Show skeleton immediately - data is "loading" while bell animates
+      defaultContent.style.display = 'none';
+      skeletonContent.classList.add('active');
+
       // Now animate the liquid fill from 0 to full
       currentFill = 0;
       waveTime = 0;
@@ -355,23 +359,17 @@
             contentArea.style.transition = 'transform 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94)';
             contentArea.style.transform = 'translateY(0)';
 
-            // Show skeleton
-            defaultContent.style.display = 'none';
-            skeletonContent.classList.add('active');
+            // Restore default content - data has "loaded"
+            skeletonContent.classList.remove('active');
+            defaultContent.style.display = 'flex';
+            defaultContent.style.opacity = '0';
+            requestAnimationFrame(() => {
+              defaultContent.style.opacity = '1';
+            });
 
-            // After skeleton, restore default content
-            setTimeout(() => {
-              skeletonContent.classList.remove('active');
-              defaultContent.style.display = 'flex';
-              defaultContent.style.opacity = '0';
-              requestAnimationFrame(() => {
-                defaultContent.style.opacity = '1';
-              });
-
-              currentFill = 0;
-              isRefreshing = false;
-              wavePath.setAttribute('d', '');
-            }, 800);
+            currentFill = 0;
+            isRefreshing = false;
+            wavePath.setAttribute('d', '');
           }, 400);
         }, 500);
       });
