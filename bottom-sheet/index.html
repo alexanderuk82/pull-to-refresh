@@ -61,12 +61,12 @@
 
     .bell-container {
       position: absolute;
-      top: 10px;
+      top: 24px;
       display: flex;
       flex-direction: column;
       align-items: center;
       transform: translateY(-70px);
-      transition: transform 0.15s var(--motion-easing-enter);
+      transition: transform 0.1s var(--motion-easing-enter);
     }
 
     .bell-container.visible {
@@ -89,8 +89,8 @@
     }
 
     .bell-svg {
-      width: 44px;
-      height: 52px;
+      width: 21.43px;
+      height: 25.74px;
     }
 
     .content-area {
@@ -385,7 +385,7 @@
           setTimeout(() => {
             // Hide bell, snap content back
             bellContainer.classList.remove('visible');
-            contentArea.style.transition = 'transform 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94)';
+            contentArea.style.transition = 'transform 0.2s cubic-bezier(0.25, 0.46, 0.45, 0.94)';
             contentArea.style.transform = 'translateY(0)';
 
             // Restore default content - data has "loaded"
@@ -440,7 +440,7 @@
       pullAmount = 0;
       isRefreshing = false;
 
-      contentArea.style.transition = 'transform 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94)';
+      contentArea.style.transition = 'transform 0.2s cubic-bezier(0.25, 0.46, 0.45, 0.94)';
       contentArea.style.transform = 'translateY(0)';
 
       bellContainer.classList.remove('visible');
